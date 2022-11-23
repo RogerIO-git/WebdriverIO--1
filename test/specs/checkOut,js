@@ -1,0 +1,57 @@
+const SignUpPage = require('../pageobjects/signup.page');
+const LoginPage = require('../pageobjects/login.page')
+const SecurePage = require('../pageobjects/secure.page');
+const AddProductPage = require('../pageobjects/addProduct.page');
+const Cart = require('../pageobjects/cart')
+const { faker } = require('@faker-js/faker');
+const User = require('../Data/User');
+const User_shipping = require('../Data/User_shipping');
+
+describe('Luma e-commerce user', () => {
+    beforeEach(async ()=>{
+        SignUpPage.open()
+        let firstName = await faker.name.firstName();
+        let lastName = await faker.name.lastName();
+        let email = await faker.internet.email(undefined, undefined, 'faker.com');
+        let password = await User.valid.password
+
+        await SignUpPage.signUp(
+            firstName,
+            lastName,
+            email,
+            password
+        );
+
+        await SecurePage.successMessage.waitForDisplayed({ timeout: 10000 });
+        await LoginPage.navigateToHome();
+        await AddProductPage.chooseProductOne();
+        await AddProductPage.addProductOne();
+        await SecurePage.successMessage.waitForDisplayed({ timeout: 10000 });
+    })
+    afterEach(async ()=>{
+        await browser.url(`https://magento.softwaretestingboard.com/customer/account/logout/`);
+    })
+    it('should be to buy item in cart', async () => {
+        await Cart.cartIcon.scrollIntoView();
+        await Cart.checkOutCart();
+        await Cart.inputShippingDetail(
+            User_shipping.valid.company,
+            User_shipping.valid.addressLine1,
+            User_shipping.valid.addressLine2,
+            User_shipping.valid.addressLine3,
+            User_shipping.valid.city,
+            User_shipping.valid.zip_pastal,
+            User_shipping.valid.phoneNum
+        );
+        await Cart.continueShippingBtn.scrollIntoView();
+        await Cart.continueShippingBtn.waitForClickable();
+        await Cart.clickNextBtn();
+        await Cart.billingAddressDetails.waitForDisplayed();
+        await Cart.placeOrderBtn.waitForDisplayed();
+        await Cart.placeOrderBtn.waitForClickable();
+        await Cart.placeOrderBtn.click();
+        await Cart.purchaseConfirmationMsg.waitForExist();
+        await expect(Cart.purchaseConfirmationMsg).toHaveTextContaining(
+            "Thank you for your purchase");
+    });
+});
